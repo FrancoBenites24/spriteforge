@@ -87,8 +87,7 @@ export default function App() {
             const newFrame = payload.new as any;
             setFrames(prev => {
               if (prev.some(f => f.id === newFrame.id)) return prev;
-              const next = [...prev, newFrame].sort((a, b) => a.position_index - b.position_index);
-              return next;
+              return [...prev, newFrame].sort((a, b) => a.position_index - b.position_index);
             });
           } else if (payload.eventType === 'DELETE') {
             setFrames(prev => prev.filter(f => f.id !== payload.old.id));
@@ -98,7 +97,21 @@ export default function App() {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'projects', filter: `id=eq.${projectId}` },
+        (payload) => {
+          const updatedProject = payload.new as any;
+          setSettings({
+            frameWidth: updatedProject.frame_width,
+            frameHeight: updatedProject.frame_height,
+            steps: updatedProject.steps,
+            speed: updatedProject.speed
+          });
+        }
+      )
       .subscribe();
+
 
     return () => {
       supabase.removeChannel(channel);
