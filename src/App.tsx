@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
-import CropModal from './components/CropModal';
+import CropEditor from './components/CropEditor';
 import PreviewPanel from './components/PreviewPanel';
 import JoinProject from './components/JoinProject';
 import { supabase } from './lib/supabase';
-import type { Frame, Settings } from './types';
+import type { Frame, Settings, Folder, Subfolder } from './types';
 import './index.css';
 
 export default function App() {
@@ -14,6 +14,10 @@ export default function App() {
   });
 
   const [frames, setFrames] = useState<Frame[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [subfolders, setSubfolders] = useState<Subfolder[]>([]);
+  const [selectedSubfolderId, setSelectedSubfolderId] = useState<string | null>(null);
+
   const [settings, setSettings] = useState<Settings>({
     frameWidth: 96,
     frameHeight: 96,
@@ -67,14 +71,39 @@ export default function App() {
         setFrames(data.map(f => ({
           id: f.id,
           project_id: f.project_id,
+          subfolder_id: f.subfolder_id,
           image_url: f.image_url,
           position_index: f.position_index
         })));
       }
     };
 
+    const fetchHierarchy = async () => {
+      const [foldersRes, subfoldersRes] = await Promise.all([
+        supabase.from('folders').select('*').eq('project_id', projectId).order('position_index', { ascending: true }),
+        supabase.from('subfolders').select('*, folders!inner(project_id)').eq('folders.project_id', projectId).order('position_index', { ascending: true })
+      ]);
+
+      if (!foldersRes.error && foldersRes.data) {
+        setFolders(foldersRes.data);
+      }
+      if (!subfoldersRes.error && subfoldersRes.data) {
+        // Remove the joined column for clean state
+        const cleanedSubfolders = subfoldersRes.data.map((s: any) => {
+          const { folders, ...rest } = s;
+          return rest;
+        });
+        setSubfolders(cleanedSubfolders);
+        
+        // Auto-select first subfolder if available and none selected
+        if (cleanedSubfolders.length > 0 && !selectedSubfolderId) {
+          setSelectedSubfolderId(cleanedSubfolders[0].id);
+        }
+      }
+    };
+
     fetchProject();
-    fetchFrames();
+    fetchHierarchy().then(fetchFrames);
 
     // Subscribe to Realtime changes
     const channel = supabase
@@ -108,6 +137,33 @@ export default function App() {
             steps: updatedProject.steps,
             speed: updatedProject.speed
           });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'folders', filter: `project_id=eq.${projectId}` },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setFolders(prev => [...prev, payload.new as Folder].sort((a, b) => a.position_index - b.position_index));
+          } else if (payload.eventType === 'DELETE') {
+            setFolders(prev => prev.filter(f => f.id !== payload.old.id));
+          } else if (payload.eventType === 'UPDATE') {
+            setFolders(prev => prev.map(f => f.id === payload.new.id ? (payload.new as Folder) : f).sort((a, b) => a.position_index - b.position_index));
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'subfolders' },
+        (payload) => {
+          // Note: Subfolders don't have project_id directly, so we filter in state or just apply it
+          if (payload.eventType === 'INSERT') {
+            setSubfolders(prev => [...prev, payload.new as Subfolder].sort((a, b) => a.position_index - b.position_index));
+          } else if (payload.eventType === 'DELETE') {
+            setSubfolders(prev => prev.filter(f => f.id !== payload.old.id));
+          } else if (payload.eventType === 'UPDATE') {
+            setSubfolders(prev => prev.map(f => f.id === payload.new.id ? (payload.new as Subfolder) : f).sort((a, b) => a.position_index - b.position_index));
+          }
         }
       )
       .subscribe();
@@ -176,10 +232,16 @@ export default function App() {
     const publicUrl = await uploadToStorage(dataUrl);
     if (!publicUrl) return;
 
+    if (!selectedSubfolderId) {
+      alert("Selecciona o crea una subcarpeta primero para añadir frames.");
+      return;
+    }
+
     const newFrame = {
       project_id: projectId,
+      subfolder_id: selectedSubfolderId,
       image_url: publicUrl,
-      position_index: frames.length
+      position_index: frames.filter(f => f.subfolder_id === selectedSubfolderId).length
     };
 
     const { data, error } = await supabase
@@ -242,29 +304,49 @@ export default function App() {
         projectId={projectId}
         settings={settings}
         setSettings={updateSettings}
-        frames={frames}
-        setFrames={setFrames}
-        onUpload={handleUpload}
-        onEditFrame={handleEditFrame}
-        onDeleteFrame={handleDeleteFrame}
+        folders={folders}
+        subfolders={subfolders}
+        selectedSubfolderId={selectedSubfolderId}
+        onSelectSubfolder={setSelectedSubfolderId}
       />
       
       <main className="flex-1 relative">
         {/* Background gradient effects */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-96 bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-orange-500/10 blur-[120px] rounded-full pointer-events-none" />
-        
-        <PreviewPanel frames={frames} settings={settings} />
+        {isCropModalOpen ? (
+          <div className="w-full h-full relative z-10">
+            <CropEditor
+              imageUrl={currentImageUrl}
+              editIndex={editIndex}
+              onClose={closeCropModal}
+              onExtractAsNew={handleExtractAsNew}
+              onReplaceOriginal={handleReplaceOriginal}
+            />
+          </div>
+        ) : !selectedSubfolderId ? (
+          <div className="w-full h-full relative z-10 flex flex-col items-center justify-center text-slate-500 animate-in fade-in duration-700">
+            <div className="w-24 h-24 rounded-[2rem] border-2 border-dashed border-white/5 mb-6 flex items-center justify-center bg-white/[0.01]">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-700"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+            </div>
+            <p className="text-xl font-medium tracking-tight">Selecciona una subcarpeta</p>
+            <p className="text-sm text-slate-600 mt-2">Crea o selecciona una subcarpeta en el panel izquierdo para comenzar a editar.</p>
+          </div>
+        ) : (
+          <PreviewPanel 
+            frames={frames.filter(f => f.subfolder_id === selectedSubfolderId)} 
+            settings={settings} 
+            onUpload={handleUpload}
+            onEditFrame={(indexInFiltered) => {
+              // We need to find the real index in the global frames array
+              const filteredFrames = frames.filter(f => f.subfolder_id === selectedSubfolderId);
+              const globalIndex = frames.findIndex(f => f.id === filteredFrames[indexInFiltered].id);
+              handleEditFrame(globalIndex);
+            }}
+            onDeleteFrame={handleDeleteFrame}
+          />
+        )}
       </main>
-
-      <CropModal
-        isOpen={isCropModalOpen}
-        imageUrl={currentImageUrl}
-        editIndex={editIndex}
-        onClose={closeCropModal}
-        onExtractAsNew={handleExtractAsNew}
-        onReplaceOriginal={handleReplaceOriginal}
-      />
     </div>
   );
 }
