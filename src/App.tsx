@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar';
 import CropEditor from './components/CropEditor';
 import PreviewPanel from './components/PreviewPanel';
 import JoinProject from './components/JoinProject';
+import CursorOverlay from './components/CursorOverlay';
 import { supabase } from './lib/supabase';
 import type { Frame, Settings, Folder, Subfolder } from './types';
 import './index.css';
@@ -166,7 +167,13 @@ export default function App() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`Suscrito exitosamente a cambios en tiempo real del proyecto ${projectId}`);
+        } else {
+          console.error('Error al suscribirse a cambios en tiempo real:', status);
+        }
+      });
 
 
     return () => {
@@ -300,6 +307,7 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-[#0f111a] overflow-hidden text-slate-200 font-body">
+      <CursorOverlay projectId={projectId} />
       <Sidebar
         projectId={projectId}
         settings={settings}
