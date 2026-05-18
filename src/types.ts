@@ -51,3 +51,27 @@ export interface PresenceUser {
   cursor: { x: number; y: number } | null;
   color: string;
 }
+
+export interface ConnectedUser {
+  name: string;
+  color: string;
+  isMe: boolean;
+}
+
+export type UndoActionType =
+  | 'ADD_FRAME'
+  | 'DELETE_FRAME'
+  | 'UPDATE_FRAME'
+  | 'ADD_FOLDER'
+  | 'DELETE_FOLDER'
+  | 'ADD_SUBFOLDER'
+  | 'DELETE_SUBFOLDER'
+  | 'RENAME_FOLDER'
+  | 'RENAME_SUBFOLDER';
+
+export interface UndoableAction {
+  type: UndoActionType;
+  undoData: any;
+  redoData: any;
+  timestamp: number;
+}

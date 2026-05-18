@@ -60,6 +60,10 @@
   .glass-button-danger {
     @apply flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-200 active:scale-95 bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 hover:border-red-500/50;
   }
+
+  .glass-card {
+    @apply bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-[2rem] shadow-2xl;
+  }
 }
 
 /* Custom Scrollbar */
