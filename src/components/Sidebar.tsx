@@ -1,6 +1,5 @@
 import React from 'react';
 import { Settings as SettingsIcon, Copy, Check, Folder as FolderIcon, ChevronDown, ChevronRight, Plus, PanelLeftClose, PanelLeftOpen, Pencil, Trash2, X as XIcon, Check as CheckIcon } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import type { Settings, Folder, Subfolder, ConnectedUser } from '../types';
 
 interface SidebarProps {
