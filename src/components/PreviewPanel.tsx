@@ -195,7 +195,7 @@ export default function PreviewPanel({ frames, settings, onUpload, onUploadMulti
               {frames.map((frame, i) => (
                 <div key={frame.id} className="relative group aspect-square rounded-xl overflow-hidden border border-white/10 bg-white/5">
                   <div className="absolute inset-0 bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYNgvwMDA/o8Bg0g4kPz4HwwDGBgYkE0FcwHTn0EXoInh1wBq+oBfHwBMp1kX2QhW+gAAAABJRU5ErkJggg==')] opacity-50" />
-                  <img src={frame.image_url} alt={`Frame ${i}`} className="w-full h-full object-contain relative z-10" />
+                  <img src={frame.image_url} crossOrigin="anonymous" alt={`Frame ${i}`} className="w-full h-full object-contain relative z-10" />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 z-20">
                     <button onClick={() => onEditFrame(i)} className="p-2 rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors"><Pencil size={16} /></button>
                     <button onClick={() => onDeleteFrame(frame.id)} className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/40 text-red-200 hover:text-white transition-colors"><X size={16} /></button>

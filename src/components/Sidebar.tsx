@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings as SettingsIcon, Copy, Check, Folder as FolderIcon, ChevronDown, ChevronRight, Plus, PanelLeftClose, PanelLeftOpen, Pencil, Trash2, X as XIcon, Check as CheckIcon } from 'lucide-react';
+import { Settings as SettingsIcon, Copy, Check, Folder as FolderIcon, ChevronDown, ChevronRight, Plus, PanelLeftClose, PanelLeftOpen, Pencil, Trash2, X as XIcon, Check as CheckIcon, Image as ImageIcon, Sparkles } from 'lucide-react';
 import type { Settings, Folder, Subfolder, ConnectedUser } from '../types';
 
 interface SidebarProps {
@@ -20,13 +20,16 @@ interface SidebarProps {
   onRenameFolder: (id: string, oldName: string, newName: string) => void;
   onRenameSubfolder: (id: string, oldName: string, newName: string) => void;
   frames: { subfolder_id: string }[];
+  currentTab: 'editor' | 'bg-removal';
+  onChangeTab: (tab: 'editor' | 'bg-removal') => void;
 }
 
 export default function Sidebar({
   projectId, settings, setSettings, folders, subfolders,
   selectedSubfolderId, onSelectSubfolder, userName, setUserName,
   connectedUsers, onCreateFolder, onCreateSubfolder, onDeleteFolder,
-  onDeleteSubfolder, onRenameFolder, onRenameSubfolder, frames
+  onDeleteSubfolder, onRenameFolder, onRenameSubfolder, frames,
+  currentTab, onChangeTab
 }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
@@ -164,6 +167,54 @@ export default function Sidebar({
       </div>
 
       <div className={`flex-1 overflow-y-auto ${isCollapsed ? 'p-2 space-y-6' : 'p-6 space-y-8'} scrollbar-thin scrollbar-thumb-white/10`}>
+        {/* Navigation Tabs */}
+        {!isCollapsed ? (
+          <div className="space-y-2">
+            <h2 className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Herramientas</h2>
+            <div className="grid grid-cols-2 gap-2 bg-white/5 p-1 rounded-xl border border-white/5">
+              <button
+                onClick={() => onChangeTab('editor')}
+                className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
+                  currentTab === 'editor'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <ImageIcon size={14} />
+                Editor
+              </button>
+              <button
+                onClick={() => onChangeTab('bg-removal')}
+                className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
+                  currentTab === 'bg-removal'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Sparkles size={14} />
+                FondoBlanco
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2 border-b border-white/5 pb-4">
+            <button
+              onClick={() => onChangeTab('editor')}
+              className={`p-2 rounded-lg transition-all ${currentTab === 'editor' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+              title="Editor de Sprites"
+            >
+              <ImageIcon size={18} />
+            </button>
+            <button
+              onClick={() => onChangeTab('bg-removal')}
+              className={`p-2 rounded-lg transition-all ${currentTab === 'bg-removal' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+              title="Quitar Fondos (FondoBlanco AI)"
+            >
+              <Sparkles size={18} />
+            </button>
+          </div>
+        )}
+
         {/* Settings Section */}
         {!isCollapsed ? (
           <>

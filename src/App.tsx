@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import CropEditor from './components/CropEditor';
 import PreviewPanel from './components/PreviewPanel';
+import BackgroundRemovalPage from './components/BackgroundRemovalPage';
 import JoinProject from './components/JoinProject';
 import CursorOverlay from './components/CursorOverlay';
 import { supabase } from './lib/supabase';
@@ -19,6 +20,7 @@ export default function App() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [subfolders, setSubfolders] = useState<Subfolder[]>([]);
   const [selectedSubfolderId, setSelectedSubfolderId] = useState<string | null>(null);
+  const [currentTab, setCurrentTab] = useState<'editor' | 'bg-removal'>('editor');
 
   const [settings, setSettings] = useState<Settings>({
     frameWidth: 96, frameHeight: 96, steps: 8, speed: 100,
@@ -367,12 +369,20 @@ export default function App() {
         onRenameFolder={handleRenameFolder}
         onRenameSubfolder={handleRenameSubfolder}
         frames={frames}
+        currentTab={currentTab}
+        onChangeTab={setCurrentTab}
       />
 
       <main className="flex-1 relative">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-96 bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-orange-500/10 blur-[120px] rounded-full pointer-events-none" />
-        {isCropModalOpen ? (
+        {currentTab === 'bg-removal' ? (
+          <BackgroundRemovalPage
+            selectedSubfolderId={selectedSubfolderId}
+            subfolders={subfolders}
+            onUploadMultiple={handleUploadMultiple}
+          />
+        ) : isCropModalOpen ? (
           <div className="w-full h-full relative z-10">
             <CropEditor
               imageUrl={currentImageUrl}
